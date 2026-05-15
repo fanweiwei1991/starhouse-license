@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>星宝积分屋 - 密钥管理后台</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#f5f5f5;min-height:100vh}
+.header{background:linear-gradient(135deg,#FF6B8A,#9B59B6);color:#fff;padding:20px;text-align:center}
+.header h1{font-size:22px;margin-bottom:4px}
+.header p{font-size:13px;opacity:.8}
+.container{max-width:800px;margin:20px auto;padding:0 16px}
+.login-box{background:#fff;border-radius:16px;padding:30px;text-align:center;margin-top:60px;box-shadow:0 2px 12px rgba(0,0,0,.08)}
+.login-box h2{margin-bottom:20px;color:#333}
+.login-box input{width:100%;max-width:300px;padding:12px 16px;border:2px solid #eee;border-radius:10px;font-size:16px;text-align:center;margin-bottom:16px}
+.login-box input:focus{outline:none;border-color:#FF6B8A}
+.btn{padding:10px 24px;border:none;border-radius:10px;font-size:15px;font-weight:600;cursor:pointer;transition:.2s}
+.btn-primary{background:#FF6B8A;color:#fff}
+.btn-primary:hover{background:#e55a7a}
+.btn-secondary{background:#f0f0f0;color:#666}
+.btn-sm{padding:6px 14px;font-size:13px;border-radius:8px}
+.btn-danger{background:#e74c3c;color:#fff}
+.btn-success{background:#27ae60;color:#fff}
+.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:20px}
+.stat-card{background:#fff;border-radius:12px;padding:16px;text-align:center;box-shadow:0 1px 6px rgba(0,0,0,.06)}
+.stat-card .num{font-size:28px;font-weight:800;color:#FF6B8A}
+.stat-card .label{font-size:12px;color:#999;margin-top:4px}
+.toolbar{display:flex;gap:10px;margin-bottom:16px;flex-wrap:wrap;align-items:center}
+.toolbar input{padding:8px 12px;border:2px solid #eee;border-radius:8px;font-size:14px}
+.toolbar input:focus{outline:none;border-color:#FF6B8A}
+.table-wrap{background:#fff;border-radius:12px;overflow:hidden;box-shadow:0 1px 6px rgba(0,0,0,.06)}
+table{width:100%;border-collapse:collapse;font-size:13px}
+th{background:#f8f8f8;padding:12px;text-align:left;font-weight:600;color:#666;border-bottom:1px solid #eee}
+td{padding:10px 12px;border-bottom:1px solid #f5f5f5;vertical-align:middle}
+tr:hover td{background:#fafafa}
+.badge{display:inline-block;padding:2px 8px;border-radius:10px;font-size:11px;font-weight:600}
+.badge-green{background:#e8f8ef;color:#27ae60}
+.badge-red{background:#fde8e8;color:#e74c3c}
+.badge-gray{background:#f0f0f0;color:#999}
+.badge-blue{background:#e8f0fe;color:#3498db}
+.key-text{font-family:monospace;font-size:13px;background:#f5f5f5;padding:2px 6px;border-radius:4px;letter-spacing:1px}
+.empty{text-align:center;color:#999;padding:40px;font-size:14px}
+.hidden{display:none}
+@media(max-width:600px){.stats{grid-template-columns:repeat(2,1fr)}table{font-size:12px}th,td{padding:8px 6px}}
+</style>
+</head>
+<body>
+<div class="header"><h1>⭐ 星宝积分屋</h1><p>密钥管理后台</p></div>
+<div class="container">
+  <div id="login-view" class="login-box">
+    <h2>🔐 管理员登录</h2>
+    <input type="password" id="admin-pwd" placeholder="输入管理员密码" onkeydown="if(event.key==='Enter')doLogin()">
+    <button class="btn btn-primary" onclick="doLogin()">登录</button>
+  </div>
+  <div id="admin-view" class="hidden">
+    <div class="stats">
+      <div class="stat-card"><div class="num" id="s-total">0</div><div class="label">总密钥</div></div>
+      <div class="stat-card"><div class="num" id="s-active">0</div><div class="label">有效</div></div>
+      <div class="stat-card"><div class="num" id="s-activated">0</div><div class="label">已激活</div></div>
+      <div class="stat-card"><div class="num" id="s-disabled">0</div><div class="label">已禁用</div></div>
+    </div>
+    <div class="toolbar">
+      <button class="btn btn-primary" onclick="showGenerate()">＋ 生成密钥</button>
+      <button class="btn btn-secondary" onclick="loadLicenses()">🔄 刷新</button>
+      <button class="btn btn-secondary" onclick="doLogout()">退出</button>
+    </div>
+    <div id="gen-panel" class="hidden" style="background:#fff;border-radius:12px;padding:16px;margin-bottom:16px;box-shadow:0 1px 6px rgba(0,0,0,.06)">
+      <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:12px">
+        <label>数量：<input type="number" id="gen-count" value="5" min="1" max="100" style="width:70px"></label>
+        <label>有效天数：<input type="number" id="gen-days" value="365" min="1" style="width:80px"></label>
+        <label>备注：<input type="text" id="gen-note" placeholder="可选" style="width:150px"></label>
+        <button class="btn btn-primary btn-sm" onclick="doGenerate()">生成</button>
+        <button class="btn btn-secondary btn-sm" onclick="document.getElementById('gen-panel').classList.add('hidden')">取消</button>
+      </div>
+      <div id="gen-result" style="display:none">
+        <div style="font-size:13px;color:#666;margin-bottom:8px">生成的密钥（点击复制）：</div>
+        <div id="gen-keys" style="font-family:monospace;font-size:14px;line-height:2;word-break:break-all;background:#f9f9f9;padding:12px;border-radius:8px"></div>
+      </div>
+    </div>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>密钥</th><th>状态</th><th>设备</th><th>有效期</th><th>创建时间</th><th>操作</th></tr></thead>
+        <tbody id="license-tbody"></tbody>
+      </table>
+      <div id="empty-tip" class="empty hidden">暂无密钥，点击上方"生成密钥"按钮创建</div>
+    </div>
+  </div>
+</div>
+<script>
+const API_BASE = location.origin + '/api/license';
+let ADMIN_KEY = '';
+function doLogin(){
+  const pwd = document.getElementById('admin-pwd').value.trim();
+  if(!pwd) return;
+  ADMIN_KEY = pwd;
+  fetch(API_BASE + '?action=stats', { headers: { 'Authorization': 'Bearer ' + ADMIN_KEY } })
+  .then(r => r.json()).then(data => {
+    if(data.error){ alert('密码错误'); return; }
+    document.getElementById('login-view').classList.add('hidden');
+    document.getElementById('admin-view').classList.remove('hidden');
+    updateStats(data.stats);
+    loadLicenses();
+  }).catch(err => alert('连接失败: ' + err.message));
+}
+function doLogout(){
+  ADMIN_KEY = '';
+  document.getElementById('admin-view').classList.add('hidden');
+  document.getElementById('login-view').classList.remove('hidden');
+  document.getElementById('admin-pwd').value = '';
+}
+function updateStats(s){
+  document.getElementById('s-total').textContent = s.total;
+  document.getElementById('s-active').textContent = s.active;
+  document.getElementById('s-activated').textContent = s.activated;
+  document.getElementById('s-disabled').textContent = s.disabled;
+}
+function showGenerate(){ document.getElementById('gen-panel').classList.remove('hidden'); document.getElementById('gen-result').style.display = 'none'; }
+function doGenerate(){
+  const count = parseInt(document.getElementById('gen-count').value) || 5;
+  const days = parseInt(document.getElementById('gen-days').value) || 365;
+  const note = document.getElementById('gen-note').value.trim();
+  fetch(API_BASE + '?action=generate', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + ADMIN_KEY },
+    body: JSON.stringify({ count, days, note })
+  }).then(r => r.json()).then(data => {
+    if(data.error){ alert(data.error); return; }
+    document.getElementById('gen-result').style.display = 'block';
+    document.getElementById('gen-keys').innerHTML = data.keys.map(k =>
+      '<div style="cursor:pointer;padding:4px 8px;border-radius:6px" onclick="copyKey(this)" onmouseover="this.style.background=\'#ffe0e8\'" onmouseout="this.style.background=\'transparent\'">' + k + '</div>'
+    ).join('');
+    loadLicenses(); fetchStats();
+  });
+}
+function copyKey(el){
+  navigator.clipboard.writeText(el.textContent).then(() => {
+    const orig = el.textContent; el.textContent = '✓ 已复制'; setTimeout(() => el.textContent = orig, 1000);
+  });
+}
+function loadLicenses(){
+  fetch(API_BASE + '?action=list', { headers: { 'Authorization': 'Bearer ' + ADMIN_KEY } })
+  .then(r => r.json()).then(data => {
+    if(data.error){ alert(data.error); return; }
+    const tbody = document.getElementById('license-tbody');
+    const empty = document.getElementById('empty-tip');
+    if(data.licenses.length === 0){ tbody.innerHTML = ''; empty.classList.remove('hidden'); return; }
+    empty.classList.add('hidden');
+    tbody.innerHTML = data.licenses.map(l => {
+      const isExpired = l.expiry && new Date(l.expiry) < new Date();
+      let statusBadge;
+      if(!l.enabled) statusBadge = '<span class="badge badge-red">已禁用</span>';
+      else if(isExpired) statusBadge = '<span class="badge badge-gray">已过期</span>';
+      else if(l.deviceId) statusBadge = '<span class="badge badge-blue">已激活</span>';
+      else statusBadge = '<span class="badge badge-green">未使用</span>';
+      const device = l.deviceId ? (l.deviceId.slice(0,8) + '...') : '-';
+      const actions = [];
+      if(l.enabled) actions.push('<button class="btn btn-sm btn-danger" onclick="doAction(\'disable\',\'' + l.key + '\')">禁用</button>');
+      else actions.push('<button class="btn btn-sm btn-success" onclick="doAction(\'enable\',\'' + l.key + '\')">启用</button>');
+      actions.push('<button class="btn btn-sm btn-secondary" onclick="doAction(\'delete\',\'' + l.key + '\')">删除</button>');
+      return '<tr><td><span class="key-text">' + l.key + '</span>' + (l.note ? '<br><span style="font-size:11px;color:#999">' + l.note + '</span>' : '') + '</td><td>' + statusBadge + '</td><td style="font-size:12px">' + device + '</td><td style="font-size:12px">' + (l.expiry || '永久') + '</td><td style="font-size:12px">' + (l.createdAt || '').slice(0,10) + '</td><td>' + actions.join(' ') + '</td></tr>';
+    }).join('');
+  });
+}
+function doAction(action, key){
+  const msg = action === 'delete' ? '确定删除此密钥？' : action === 'disable' ? '确定禁用此密钥？' : '确定重新启用？设备绑定将重置';
+  if(!confirm(msg)) return;
+  fetch(API_BASE + '?action=' + action, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + ADMIN_KEY },
+    body: JSON.stringify({ key })
+  }).then(r => r.json()).then(data => { if(!data.error){ loadLicenses(); fetchStats(); } });
+}
+function fetchStats(){
+  fetch(API_BASE + '?action=stats', { headers: { 'Authorization': 'Bearer ' + ADMIN_KEY } })
+  .then(r => r.json()).then(data => { if(!data.error) updateStats(data.stats); });
+}
+</script>
+</body>
+</html>
